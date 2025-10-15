@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initStickyCTA();
     initCounterAnimation();
     initParallaxEffect();
+    initFormSubmission();
     
 });
 
@@ -204,6 +205,117 @@ function initParallaxEffect() {
             orb.style.transform = `translateY(${yPos}px)`;
         });
     });
+}
+
+// ============================================
+// Form Submission Handler
+// ============================================
+function initFormSubmission() {
+    const form = document.querySelector('#registrationForm');
+    const formMessage = document.querySelector('#formMessage');
+    
+    if (!form) return;
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const formData = {
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            qualification: document.getElementById('qualification').value,
+            age: document.getElementById('age').value,
+            city: document.getElementById('city').value.trim()
+        };
+        
+        // Validate form
+        if (!validateForm(formData)) {
+            showMessage('error', 'الرجاء ملء جميع الحقول بشكل صحيح');
+            return;
+        }
+        
+        // Disable submit button
+        const submitButton = form.querySelector('.submit-button');
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري الإرسال...</span>';
+        
+        try {
+            // Send data to n8n webhook
+            const response = await fetch('https://primary-production-47599.up.railway.app/webhook-test/f8188da5-8145-4107-bb65-b0a9ae7505f7', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                showMessage('success', 'تم التسجيل بنجاح! ✨ سيتم التواصل معك قريباً');
+                form.reset();
+                
+                // Track successful submission
+                if (window.LeapDigital) {
+                    window.LeapDigital.trackEvent('form_submitted', formData);
+                }
+            } else {
+                throw new Error('فشل الإرسال');
+            }
+        } catch (error) {
+            console.error('Form submission error:', error);
+            showMessage('error', 'حدث خطأ أثناء الإرسال. الرجاء المحاولة مرة أخرى');
+        } finally {
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+        }
+    });
+    
+    function validateForm(data) {
+        // Check if all fields are filled
+        if (!data.name || !data.email || !data.phone || !data.qualification || !data.age || !data.city) {
+            return false;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email)) {
+            showMessage('error', 'الرجاء إدخال بريد إلكتروني صحيح');
+            return false;
+        }
+        
+        // Validate phone number (Egyptian format)
+        const phoneRegex = /^(01)[0-9]{9}$/;
+        if (!phoneRegex.test(data.phone.replace(/\s+/g, ''))) {
+            showMessage('error', 'الرجاء إدخال رقم هاتف مصري صحيح (01XXXXXXXXX)');
+            return false;
+        }
+        
+        // Validate age
+        const age = parseInt(data.age);
+        if (isNaN(age) || age < 16 || age > 100) {
+            showMessage('error', 'الرجاء إدخال عمر صحيح (بين 16 و 100)');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function showMessage(type, message) {
+        formMessage.className = 'form-message ' + type;
+        formMessage.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        
+        // Scroll to message
+        formMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Auto-hide success message after 5 seconds
+        if (type === 'success') {
+            setTimeout(() => {
+                formMessage.style.display = 'none';
+            }, 5000);
+        }
+    }
 }
 
 // ============================================
