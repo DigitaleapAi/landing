@@ -243,7 +243,7 @@ function initFormSubmission() {
         
         try {
             // Send data to n8n webhook
-            const response = await fetch('https://primary-production-47599.up.railway.app/webhook-test/f8188da5-8145-4107-bb65-b0a9ae7505f7', {
+            const response = await fetch('https://primary-production-47599.up.railway.app/webhook/f8188da5-8145-4107-bb65-b0a9ae7505f7', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
